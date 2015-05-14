@@ -1,12 +1,10 @@
 """
-This file provides an easy interface for reading from PDB files. It can process
-either .xml or .pdb files with similar functionality.
+This file provides an easy interface for reading from PDB files.
 """
+
 import itertools
 import logging
 import os
-
-from lxml import etree as ET
 
 
 def iCodeOrder(icname):
@@ -88,6 +86,13 @@ class PDBData(object):
         if in_residue is not None:
             result = [x for x in result if x.compound in in_residue]
         return result
+
+    def get_phoso_sites(self):
+        """
+        Returns a list of phosphorolayted residues.
+        """
+
+        return [x for x in self.get_compounds() if x.name in ("PTR", "SEP", "TPO")]
 
     def get_compounds(self):
         """
@@ -203,28 +208,14 @@ def find_pdb_files(folder):
     Finds all PDB files in a given folder.
     """
 
-    return [os.path.join(folder, file) for file in os.listdir(folder) if file[-3:] == "pdb"]
+    return [os.path.join(folder, file_name) for file_name in os.listdir(folder) if file_name[-3:] == "pdb"]
 
-def parse_pdb(file_name, file_type=None):
+def parse_pdb(file_name):
     """
-    This is the function that should be called from external files. This will
-    parse either a text file or a XML file and return a corresponding PDBData
-    object.
+    This is the function that should be called from external files.
     """
 
-    if file_type is None:
-        suffix = file_name.split('.')[-1]
-        if suffix == "xml":
-            return parse_pdb_xml(file_name)
-        elif suffix == "pdb":
-            return parse_pdb_text(file_name)
-    elif file_type == "xml":
-        return parse_pdb_xml(file_name)
-    elif file_type == "text":
-        return parse_pdb_text(file_name)
-
-    logging.error("Could not parse pdb file %s, unknown type", file_name)
-    return None
+    return parse_pdb_text(file_name)
 
 def parse_pdb_text(file_name):
     """
@@ -237,7 +228,7 @@ def parse_pdb_text(file_name):
     processed_model = False
     with open(file_name) as pdb_file:
         for line in pdb_file:
-            if "ATOM" == line[0:4]:
+            if "ATOM" == line[0:4] or "HETATM" == line[0:6]:
                 x = float(line[30:38].strip())
                 y = float(line[38:46].strip())
                 z = float(line[46:54].strip())
@@ -275,51 +266,6 @@ def parse_pdb_text(file_name):
                 end_seq = (line[33:37].strip())
                 end_insertion = line[37].strip()
                 data.add_sheet(chain_id, start_seq + start_insertion, end_seq +  end_insertion)
-            if "MODRES" == line[0:5]:
-                residue_name = line[12:15].strip()
-                chain_id = line[16].strip()
-                sequence_id = line[18:23].strip()
 
-                # Do something here
     logging.info("Loaded %s (%d atoms)", file_name, atom_count)
-    return data
-
-def parse_pdb_xml(file_name):
-    """
-    Parse a XML formatted PDB file.
-
-    DEPRECATED
-    """
-
-
-    def add_namespace(tag, namespace_map):
-        """
-        Adds a namespace to a tag.
-        """
-
-        return "{" + namespace_map["PDBx"] + "}" + tag
-
-
-    data = PDBData()
-
-    root = ET.parse(file_name).getroot()
-    namespace_map = root.nsmap
-    for atom_xml in root.iter(add_namespace("atom_site", namespace_map)):
-
-        x = float(atom_xml.find(add_namespace("Cartn_x", namespace_map)).text)
-        y = float(atom_xml.find(add_namespace("Cartn_y", namespace_map)).text)
-        z = float(atom_xml.find(add_namespace("Cartn_z", namespace_map)).text)
-        compound = atom_xml.find(add_namespace("auth_comp_id", namespace_map)).text
-        atom = atom_xml.find(add_namespace("auth_atom_id", namespace_map)).text
-        sequence_id = int(atom_xml.find(add_namespace("auth_seq_id", namespace_map)).text)
-        alt_id = atom_xml.find(add_namespace("label_alt_id", namespace_map)).text
-
-        pdb_atom = PDBAtom()
-        pdb_atom.position = (x, y, z)
-        pdb_atom.compound = compound
-        pdb_atom.atom = atom
-        pdb_atom.sequence_id = sequence_id
-        pdb_atom.alt_id = alt_id
-
-        data.add_atom(pdb_atom)
     return data
