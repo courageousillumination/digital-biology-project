@@ -94,7 +94,7 @@ class PDBData(object):
 
         return [x for x in self.get_compounds() if x.name in ("PTR", "SEP", "TPO")]
 
-    def get_compounds(self):
+    def get_compounds(self, names=None):
         """
         Breaks up the atoms into sets of compounds.
         """
@@ -102,7 +102,10 @@ class PDBData(object):
         compounds = []
         for sequence_id, compound in itertools.groupby(self.atoms, lambda x: x.sequence_id):
             compounds.append(PDBCompound(sequence_id, list(compound)))
-        return compounds
+        if names == None:
+            return compounds
+        else:
+            return [x for x in compounds if x.name in names]
 
     def get_adjacent_compounds(self):
         """
