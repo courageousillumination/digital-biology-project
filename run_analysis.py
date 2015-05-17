@@ -31,6 +31,8 @@ if __name__ == "__main__":
     data = parse_pdb("./1a81H.pdb")
     phospo_sites = data.get_phoso_sites()
     non_phoso_sites = data.get_compounds(names=["TYR", "THR", "SER"])
+    # print dehydrons
+    output_summary = {}
     for dehydron in dehydrons:
         residue1 = data.get_residue_by_id(dehydron[0][0], dehydron[0][1])
         residue2 = data.get_residue_by_id(dehydron[1][0], dehydron[1][1])
@@ -44,10 +46,19 @@ if __name__ == "__main__":
             values.append(distance1 + distance2 / 2.0)
             # if distance1 < 6.5 and distance2 < 6.5:
             #     print(site, dehydron, distance1, distance2)
-    #print data, dehydrons
-    pyplot.hist(values, 25, normed=True)
-    pyplot.xlim(0, 180)
-    pyplot.xlabel("Average distance (A)")
-    pyplot.ylabel("Probability")
-    pyplot.title("Distribution of distances for Non-Phosphorylated residues")
-    pyplot.savefig("non_phospho.png")
+            #print data, dehydrons
+            if distance1 < 6.5 and distance2 < 6.5:
+                # print(phospo_site, dehydron, distance1, distance2, phospo_site.chain_id)
+                # print "(" + dehydron[1][0].strip() + ", " + dehydron[1][1].strip() + ")"
+                if dehydron not in output_summary:
+                    output_summary[dehydron] = 0
+                output_summary[dehydron] += 1
+
+    # print output_summary
+    # print data, dehydrons
+    # pyplot.hist(values, 25, normed=True)
+    # pyplot.xlim(0, 180)
+    # pyplot.xlabel("Average distance (A)")
+    # pyplot.ylabel("Probability")
+    # pyplot.title("Distribution of distances for Non-Phosphorylated residues")
+    # pyplot.savefig("non_phospho.png")
