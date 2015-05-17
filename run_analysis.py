@@ -29,15 +29,16 @@ if __name__ == "__main__":
     dehydrons = get_dehydrons("wrappers.txt")
     data = parse_pdb("./1a81H.pdb")
     phospo_sites = data.get_phoso_sites()
+    print dehydrons
     for dehydron in dehydrons:
-        residue1 = data.get_residue_by_id(dehydron[0])
-        residue2 = data.get_residue_by_id(dehydron[1])
+        residue1 = data.get_residue_by_id(dehydron[0][0], dehydron[0][1])
+        residue2 = data.get_residue_by_id(dehydron[1][0], dehydron[1][1])
         position1 = residue1.get_atom("CA").position
         position2 = residue2.get_atom("CA").position
         for phospo_site in phospo_sites:
             phospo_position = phospo_site.get_atom("CA").position
             distance1 = distance(position1, phospo_position)
             distance2 = distance(position2, phospo_position)
-            if distance1 < 15 and distance2 < 15:
-                print(phospo_site, dehydron)
+            if distance1 < 6.5 and distance2 < 6.5:
+                print(phospo_site, dehydron, distance1, distance2)
     # print data, dehydrons

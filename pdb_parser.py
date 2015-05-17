@@ -111,8 +111,9 @@ class PDBData(object):
         Get's a residue with a specific ID.
         """
 
+
         return PDBCompound(residue_id, [x for x in self.atoms if
-                                        compound_id_to_float(x.sequence_id) == residue_id and
+                                        compound_id_to_float(x.sequence_id) == compound_id_to_float(residue_id) and
                                         chain_id == x.chain_id])
 
     def get_compounds(self, names=None):

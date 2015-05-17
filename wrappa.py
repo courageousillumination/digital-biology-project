@@ -12,8 +12,10 @@ def get_dehydrons(file_name):
             if line.find("HB_") == 0:
                 a = line[49:52].strip()
                 b = line[72:75].strip()
-                if a.isdigit() and b.isdigit()  and a != a_prev and b != b_prev:
+                chain_a = line[46:47].strip()
+                chain_b = line[69:70].strip()
+                if a and b and a != a_prev and b != b_prev:
                     a_prev = a
                     b_prev = b
-                    res.append((int(a), int(b)))
+                    res.append(((a, chain_a), (b, chain_b)))
     return res
