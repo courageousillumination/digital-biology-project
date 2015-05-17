@@ -4,7 +4,19 @@ This file provides an easy interface for reading from PDB files.
 
 import itertools
 import logging
+import math
 import os
+
+
+def distance(position1, position2):
+    """
+    Calculate the distance between two positions (3 tuples of floats)
+    """
+
+    distance1 = position1[0] - position2[0]
+    distance2 = position1[1] - position2[1]
+    distance3 = position1[2] - position2[2]
+    return math.sqrt(distance1 * distance1 + distance2 * distance2 + distance3 * distance3)
 
 
 def iCodeOrder(icname):
@@ -94,14 +106,24 @@ class PDBData(object):
 
         return [x for x in self.get_compounds() if x.name in ("PTR", "SEP", "TPO")]
 
+    def get_residue_by_id(self, residue_id, chain_id):
+        """
+        Get's a residue with a specific ID.
+        """
+
+        return PDBCompound(residue_id, [x for x in self.atoms if
+                                        compound_id_to_float(x.sequence_id) == residue_id and
+                                        chain_id == x.chain_id])
+
     def get_compounds(self, names=None):
         """
         Breaks up the atoms into sets of compounds.
         """
 
         compounds = []
-        for sequence_id, compound in itertools.groupby(self.atoms, lambda x: x.sequence_id):
-            compounds.append(PDBCompound(sequence_id, list(compound)))
+        for _, atoms in itertools.groupby(self.atoms, lambda x: x.chain_id):
+            for sequence_id, compound in itertools.groupby(atoms, lambda x: x.sequence_id):
+                compounds.append(PDBCompound(sequence_id, list(compound)))
         if names == None:
             return compounds
         else:
