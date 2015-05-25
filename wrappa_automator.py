@@ -30,24 +30,32 @@ def run_wrappa(browser, pdb_file):
     if os.path.getsize(pdb_file) > 3000000:
         logging.warn("%s is too large (size is %d), skipping", pdb_file, os.path.getsize(pdb_file))
         return False
+    if os.path.isfile(pdb_file[:-4] + "_bonds.txt"):
+        logging.warn("%s has already been processed, skipping", pdb_file)
+        return False
 
     full_path = os.path.abspath(pdb_file)
     directory, file_name = os.path.split(full_path)
     pdb_name = file_name[:-4]
 
-    browser.get("http://www.wrappa.org/wrappa01/wrappa")
-    browser.find_element_by_name("pdbFileName").send_keys(full_path)
-    browser.find_element_by_xpath("//*[@type='submit']").click()
-    # Use the default configuration
-    browser.find_element_by_xpath("//*[@type='submit']").click()
-    # Analyze
-    browser.find_element_by_xpath("//*[@type='submit']").click()
-    # Download the files created
-    browser.find_element_by_link_text("Bonds").click()
-    save_page_as(browser, os.path.join(directory, pdb_name + "_wrappers.txt"))
-    browser.back()
-    browser.find_element_by_link_text("Wrappers").click()
-    save_page_as(browser, os.path.join(directory, pdb_name + "_bonds.txt"))
+    try:
+        browser.get("http://www.wrappa.org/wrappa01/wrappa")
+        browser.find_element_by_name("pdbFileName").send_keys(full_path)
+        browser.find_element_by_xpath("//*[@type='submit']").click()
+        # Use the default configuration
+        browser.find_element_by_xpath("//*[@type='submit']").click()
+        # Analyze
+        browser.find_element_by_xpath("//*[@type='submit']").click()
+        # Download the files created
+        browser.find_element_by_link_text("Bonds").click()
+        save_page_as(browser, os.path.join(directory, pdb_name + "_wrappers.txt"))
+        browser.back()
+        browser.find_element_by_link_text("Wrappers").click()
+        save_page_as(browser, os.path.join(directory, pdb_name + "_bonds.txt"))
+    except Exception as e:
+        logging.exception(e)
+        logging.error("Encounterd exception for %s", pdb_file)
+        return False
 
     return True
 
