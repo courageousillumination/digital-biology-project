@@ -8,11 +8,12 @@ import logging
 import os
 
 from matplotlib import pyplot
+from progressbar import ProgressBar
 
 from pdb_parser import distance, find_pdb_files, parse_pdb
 from wrappa import get_dehydrons
 
-RESIDUES_OF_INTEREST = ("TYR", "SER", "THR", "PTR", "SEP", "TPO")
+RESIDUES_OF_INTEREST = ("TYR", "SER", "THR")#, "PTR", "SEP", "TPO")
 
 def count_residues(pdb_data):
     """
@@ -20,6 +21,22 @@ def count_residues(pdb_data):
     """
 
     return {x: len(pdb_data.get_compounds([x])) for x in RESIDUES_OF_INTEREST}
+
+def get_dehydron_positions(pdb_data, dehydrons):
+    """
+    Converts a list of dehdyrons to a list of positions.
+    """
+
+
+    dehydron_positions = []
+    for dehydron in dehydrons:
+        residue1 = pdb_data.get_residue_by_id(dehydron[0][0], dehydron[0][1])
+        residue2 = pdb_data.get_residue_by_id(dehydron[1][0], dehydron[1][1])
+
+        position1 = residue1.get_atom("CA").position
+        position2 = residue2.get_atom("CA").position
+        dehydron_positions.append((position1, position2))
+    return dehydron_positions
 
 def phosphorylation_in_desolvation(pdb_data, sites, dehydrons):
     """
@@ -35,6 +52,7 @@ def phosphorylation_in_desolvation(pdb_data, sites, dehydrons):
 
         position1 = residue1.get_atom("CA").position
         position2 = residue2.get_atom("CA").position
+
         for site in sites:
             phospo_position = site.get_atom("CA").position
             distance1 = distance(position1, phospo_position)
@@ -42,6 +60,30 @@ def phosphorylation_in_desolvation(pdb_data, sites, dehydrons):
             if distance1 <= 6.5 and distance2 <= 6.5:
                 results.append((site, (residue1, residue2)))
     return results
+
+def min_distance_to_dehydron(pdb_data, sites, dehydrons):
+    """
+    Get the minimum distance to a dehydron.
+    """
+
+    dehydron_positions = get_dehydron_positions(pdb_data, dehydrons)
+    results = []
+
+
+    for site in sites:
+        site_alpha = site.get_atom("CA")
+        if site_alpha is None:
+            continue
+        site_position = site_alpha.position
+        min_distance = float("inf")
+        for position1, position2 in dehydron_positions:
+            dist = (distance(position1, site_position) + distance(position2, site_position)) / 2.0
+            if dist < min_distance:
+                min_distance = dist
+        if min_distance != float("inf"):
+            results.append(min_distance)
+    return results
+
 
 def run_analysis(pdb_name, data_directory):
     """
@@ -70,9 +112,10 @@ def run_analysis(pdb_name, data_directory):
 
     # Get the sites of interest
     phospo_sites = pdb_data.get_phoso_sites()
-    #non_phoso_sites = pdb_data.get_compounds(names=["TYR", "THR", "SER"])
+    non_phospo_sites = pdb_data.get_compounds(names=["TYR", "THR", "SER"])
 
-    return count_residues(pdb_data), len(phospo_sites), phosphorylation_in_desolvation(pdb_data, phospo_sites, dehydrons)
+    return min_distance_to_dehydron(pdb_data, non_phospo_sites, dehydrons)
+    #return count_residues(pdb_data), len(phospo_sites), phosphorylation_in_desolvation(pdb_data, phospo_sites, dehydrons)
 
 
 def main():
@@ -86,29 +129,37 @@ def main():
                         help="Set a limit on the number of files to process")
     args = parser.parse_args()
 
-    all_residue_counts = {x: 0 for x in RESIDUES_OF_INTEREST}
-    num_phospo_sites = []
-    all_pairs = {}
+    # all_residue_counts = {x: 0 for x in RESIDUES_OF_INTEREST}
+    # num_phospo_sites = []
+    # all_pairs = {}
 
-    for i, pdb_file in enumerate(find_pdb_files(args.data_directory)):
-        if args.limit is not None and i >= args.limit:
-            break
+    min_distances = []
+    files = find_pdb_files(args.data_directory)
+    with ProgressBar(maxval=len(files)) as progress:
+        for i, pdb_file in enumerate(files):
+            if args.limit is not None and i >= args.limit:
+                break
 
-        residue_counts, num_sites, pairs = run_analysis(os.path.split(pdb_file[:-4])[1], args.data_directory)
+            #residue_counts, num_sites, pairs = run_analysis(os.path.split(pdb_file[:-4])[1], args.data_directory)
 
-        # Merge in the data
-        for x in RESIDUES_OF_INTEREST:
-            all_residue_counts[x] += residue_counts[x]
-        num_phospo_sites.append(num_sites)
-        all_pairs[os.path.split(pdb_file[:-4])] = pairs
+            # Merge in the data
+            # for x in RESIDUES_OF_INTEREST:
+            #     all_residue_counts[x] += residue_counts[x]
+            #
+            # num_phospo_sites.append(num_sites)
+            # all_pairs[os.path.split(pdb_file[:-4])] = pairs
+            min_distances += run_analysis(os.path.split(pdb_file[:-4])[1], args.data_directory)
+            progress.update(i)
+    pyplot.hist(min_distances)
+    pyplot.show()
 
     # Display the final data
-    print(all_pairs)
-    print(sum(len(x) for x in all_pairs.values()))
+    #print(all_pairs)
+    #print(sum(len(x) for x in all_pairs.values()))
     #print(all_residue_counts)
     #pyplot.hist(num_phospo_sites)
     #pyplot.show()
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(filename="debug.log", level=logging.INFO)
     main()
