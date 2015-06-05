@@ -13,7 +13,8 @@ from progressbar import ProgressBar
 from pdb_parser import distance, find_pdb_files, parse_pdb
 from wrappa import get_dehydrons
 
-RESIDUES_OF_INTEREST = ("TYR", "SER", "THR")#, "PTR", "SEP", "TPO")
+# RESIDUES_OF_INTEREST = ("TYR", "SER", "THR")#, "PTR", "SEP", "TPO")
+RESIDUES_OF_INTEREST = ("TYR")#, "PTR")
 
 def count_residues(pdb_data):
     """
@@ -112,7 +113,8 @@ def run_analysis(pdb_name, data_directory):
 
     # Get the sites of interest
     phospo_sites = pdb_data.get_phoso_sites()
-    non_phospo_sites = pdb_data.get_compounds(names=["TYR", "THR", "SER"])
+    #non_phospo_sites = pdb_data.get_compounds(names=["TYR", "THR", "SER"])
+    non_phospo_sites = pdb_data.get_compounds(names=["TYR"])
 
     return min_distance_to_dehydron(pdb_data, non_phospo_sites, dehydrons)
     #return count_residues(pdb_data), len(phospo_sites), phosphorylation_in_desolvation(pdb_data, phospo_sites, dehydrons)
