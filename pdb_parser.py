@@ -104,7 +104,9 @@ class PDBData(object):
         Returns a list of phosphorolayted residues.
         """
 
-        return [x for x in self.get_compounds() if x.name in ("PTR", "SEP", "TPO")]
+        # return [x for x in self.get_compounds() if x.name in ("PTR", "SEP", "TPO")]
+        return [x for x in self.get_compounds() if x.name in ("PTR")]
+
 
     def get_residue_by_id(self, residue_id, chain_id):
         """

@@ -8,7 +8,7 @@ import logging
 import os
 
 from matplotlib import pyplot
-from progressbar import ProgressBar
+# from progressbar import ProgressBar
 
 from pdb_parser import distance, find_pdb_files, parse_pdb
 from wrappa import get_dehydrons
@@ -47,6 +47,7 @@ def phosphorylation_in_desolvation(pdb_data, sites, dehydrons):
     """
 
     results = []
+    errors = 0
     for dehydron in dehydrons:
         residue1 = pdb_data.get_residue_by_id(dehydron[0][0], dehydron[0][1])
         residue2 = pdb_data.get_residue_by_id(dehydron[1][0], dehydron[1][1])
@@ -55,11 +56,16 @@ def phosphorylation_in_desolvation(pdb_data, sites, dehydrons):
         position2 = residue2.get_atom("CA").position
 
         for site in sites:
-            phospo_position = site.get_atom("CA").position
-            distance1 = distance(position1, phospo_position)
-            distance2 = distance(position2, phospo_position)
-            if distance1 <= 6.5 and distance2 <= 6.5:
-                results.append((site, (residue1, residue2)))
+            try: 
+                phospo_position = site.get_atom("CA").position
+                distance1 = distance(position1, phospo_position)
+                distance2 = distance(position2, phospo_position)
+                if distance1 <= 6.5 and distance2 <= 6.5:
+                    results.append((site, (residue1, residue2)))
+            except AttributeError:
+                print site
+                errors+=1
+    print errors
     return results
 
 def min_distance_to_dehydron(pdb_data, sites, dehydrons):
@@ -116,9 +122,9 @@ def run_analysis(pdb_name, data_directory):
     #non_phospo_sites = pdb_data.get_compounds(names=["TYR", "THR", "SER"])
     non_phospo_sites = pdb_data.get_compounds(names=["TYR"])
 
-    return min_distance_to_dehydron(pdb_data, non_phospo_sites, dehydrons)
+    #return min_distance_to_dehydron(pdb_data, non_phospo_sites, dehydrons)
     #return count_residues(pdb_data), len(phospo_sites), phosphorylation_in_desolvation(pdb_data, phospo_sites, dehydrons)
-
+    return phosphorylation_in_desolvation(pdb_data, phospo_sites, dehydrons)
 
 def main():
     """
@@ -135,12 +141,14 @@ def main():
     # num_phospo_sites = []
     # all_pairs = {}
 
-    min_distances = []
+    # min_distances = []
+    phospho_sites_count = []
     files = find_pdb_files(args.data_directory)
-    with ProgressBar(maxval=len(files)) as progress:
-        for i, pdb_file in enumerate(files):
-            if args.limit is not None and i >= args.limit:
-                break
+    # with ProgressBar(maxval=len(files)) as progress:
+    # progress = ProgressBar(maxval=len(files))
+    for i, pdb_file in enumerate(files):
+        if args.limit is not None and i >= args.limit:
+            break
 
             #residue_counts, num_sites, pairs = run_analysis(os.path.split(pdb_file[:-4])[1], args.data_directory)
 
@@ -150,9 +158,14 @@ def main():
             #
             # num_phospo_sites.append(num_sites)
             # all_pairs[os.path.split(pdb_file[:-4])] = pairs
-            min_distances += run_analysis(os.path.split(pdb_file[:-4])[1], args.data_directory)
-            progress.update(i)
-    pyplot.hist(min_distances)
+        # min_distances += run_analysis(os.path.split(pdb_file[:-4])[1], args.data_directory)
+        # progress.update(i)
+        phospho_sites_count.append(len(run_analysis(os.path.split(pdb_file[:-4])[1], args.data_directory)))
+    #progress.finish()
+    pyplot.hist(phospho_sites_count)
+    pyplot.xlabel('Number of phosphorylated TYR')
+    pyplot.ylabel('Number of occurrences')
+    pyplot.title('Number of phosphorylated TYR per PDB file')
     pyplot.show()
 
     # Display the final data
